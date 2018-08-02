@@ -238,6 +238,20 @@ abstract class AbstractDBService<TItemClass> implements InitializingBean {
     }
 
     /**
+     * Decrement a count with an atomic operation (no range key)
+     *
+     * @param hashKey
+     * @param attributeName
+     * @param attributeIncrement
+     * @return
+     */
+    Integer decrement(Object hashKey,
+                      String attributeName,
+                      int attributeIncrement = 1) {
+        increment(hashKey, attributeName, -attributeIncrement)
+    }
+
+    /**
      * Delete item by IDs.
      *
      * @param hashKey hash key of the item to delete
@@ -455,6 +469,20 @@ abstract class AbstractDBService<TItemClass> implements InitializingBean {
                       String attributeName,
                       int attributeIncrement = 1) {
         UpdateItemResult result = updateItemAttribute(hashKey, rangeKey, attributeName, attributeIncrement, AttributeAction.ADD)
+        result?.attributes[attributeName]?.getN()?.toInteger()
+    }
+
+    /**
+     * Increment a count with an atomic operation, no range key.
+     * @param hashKey
+     * @param attributeName
+     * @param attributeIncrement
+     * @return
+     */
+    Integer increment(Object hashKey,
+                      String attributeName,
+                      int attributeIncrement = 1) {
+        UpdateItemResult result = updateItemAttribute(hashKey, null, attributeName, attributeIncrement, AttributeAction.ADD)
         result?.attributes[attributeName]?.getN()?.toInteger()
     }
 
@@ -790,8 +818,7 @@ abstract class AbstractDBService<TItemClass> implements InitializingBean {
         UpdateItemRequest request = new UpdateItemRequest(
                 tableName: mainTable.tableName(),
                 key: [
-                        (hashKeyName): buildAttributeValue(hashKey),
-                        (rangeKeyName): buildAttributeValue(rangeKey)
+                        (hashKeyName): buildAttributeValue(hashKey)
                 ],
                 returnValues: ReturnValue.UPDATED_NEW
         ).addAttributeUpdatesEntry(
@@ -801,6 +828,9 @@ abstract class AbstractDBService<TItemClass> implements InitializingBean {
                         value: buildAttributeValue(attributeValue)
                 )
         )
+        if (rangeKey) {
+            request.key.rangeKeyName = buildAttributeValue(rangeKey)
+        }
         client.updateItem(request)
     }
 
